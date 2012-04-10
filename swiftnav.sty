@@ -48,10 +48,10 @@
 
 % Fancy headers
 \pagestyle{fancy}
-\lhead{{Swift Navigation}}
+\lhead{\@author}
 \chead{}
-\rhead{{SwiftGNSS Datasheet}}
-\lfoot{\footnotesize{Version \theversion, \today}}
+\rhead{\@title}
+\lfoot{\footnotesize{Version \theversion, \@date}}
 \cfoot{}
 \rfoot{\thepage}
 \renewcommand{\headrulewidth}{1pt}
@@ -63,4 +63,46 @@
 \newcommand{\bulletnoindent}{
   \setlength{\itemsep}{0pt}
   \setlength{\itemindent}{-12pt}
+}
+
+
+% Redefine the title style, very similar to article.cls
+\renewcommand{\maketitle}{\par
+  \begingroup
+    \renewcommand\thefootnote{\@fnsymbol\c@footnote}%
+    \def\@makefnmark{\rlap{\@textsuperscript{\normalfont\@thefnmark}}}%
+    \long\def\@makefntext##1{\parindent 1em\noindent
+            \hb@xt@1.8em{%
+                \hss\@textsuperscript{\normalfont\@thefnmark}}##1}%
+    \if@twocolumn
+      \ifnum \col@number=\@ne
+        \@maketitle
+      \else
+        \twocolumn[\@maketitle]%
+      \fi
+    \else
+      \newpage
+      \global\@topnum\z@   % Prevents figures from going at top of page.
+      \@maketitle
+    \fi
+    \@thanks
+  \endgroup
+  \setcounter{footnote}{0}%
+  \global\let\thanks\relax
+  \global\let\maketitle\relax
+  \global\let\@maketitle\relax
+  \global\let\title\relax
+  \global\let\author\relax
+  \global\let\date\relax
+  \global\let\and\relax
+}
+\def\@maketitle{%
+  \newpage%
+  \null
+  \begin{center}%
+  \let \footnote \thanks
+    {\Huge{\textbf{\color{alt}\@title}} \par}%
+  \end{center}%
+  \par
+  \vskip 4em
 }
