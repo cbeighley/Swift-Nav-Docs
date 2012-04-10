@@ -12,11 +12,21 @@
 
 \begin{document}
 
-\begin{multicols*}{2}
-\raggedcolumns
 \maketitle
 
+%\pagebreak
+%\tableofcontents
+%\pagebreak
+
+
+%\raggedcolumns
+
+\begin{multicols}{2}
+
+\tableofcontents
+
 \section{Foo}
+\subsection{Foobar}
 \large
 \label{sec:Features}
 \begin{itemize}
@@ -27,10 +37,15 @@
 \end{itemize}
 \normalsize
 
+\subsection{Jizz}
+\lipsum[1]
+
 \section{Bar}
+\subsection{Hello}
+\lipsum[1]
+\subsection{World}
+\lipsum[2-7]
 
-\lipsum[1-5]
-
-\end{multicols*} 
+\end{multicols} 
 
 \end{document} 
