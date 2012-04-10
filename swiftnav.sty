@@ -1,0 +1,66 @@
+\ProvidesPackage{swiftnav}
+
+% Font
+%\usepackage[math]{iwona}
+\usepackage{cmbright}
+
+\usepackage[cm]{fullpage} 
+\usepackage{multicol}
+\usepackage{color}
+\usepackage{fancyhdr}
+\usepackage{lipsum}
+\usepackage{graphicx}
+\usepackage{boxedminipage}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{titlesec}
+
+% Tables
+\usepackage{booktabs}
+\usepackage{threeparttable}
+
+% PDF links and metadata setup
+\usepackage[pagebackref=true]{hyperref} % must be last
+\hypersetup{
+    pdfauthor = {Swift Navigation},
+    colorlinks,
+    citecolor=alt,
+    linkcolor=alt,
+    urlcolor=alt
+}
+
+% Define our alternate color
+\definecolor{alt}{RGB}{140,0,0}
+
+% Colored section headings
+\titleformat*{\section}{\color{alt}\normalfont\huge\bfseries}
+
+% Tweak the page layout
+\setlength{\headheight}{12.5pt}
+\setlength{\headsep}{25pt}
+\setlength{\voffset}{-15pt}
+
+% Define command to set a document version.
+\newcommand{\theversion}{?}
+\newcommand{\version}[1]{
+  \renewcommand{\theversion}{#1}
+}
+
+% Fancy headers
+\pagestyle{fancy}
+\lhead{{Swift Navigation}}
+\chead{}
+\rhead{{SwiftGNSS Datasheet}}
+\lfoot{\footnotesize{Version \theversion, \today}}
+\cfoot{}
+\rfoot{\thepage}
+\renewcommand{\headrulewidth}{1pt}
+\renewcommand{\footrulewidth}{1pt}
+
+% Bullet point symbols
+\renewcommand{\labelitemi}{\color{alt}\footnotesize{$\blacksquare$}}
+% Bullet point style with no indent
+\newcommand{\bulletnoindent}{
+  \setlength{\itemsep}{0pt}
+  \setlength{\itemindent}{-12pt}
+}
