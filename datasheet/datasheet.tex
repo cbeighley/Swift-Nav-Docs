@@ -100,7 +100,7 @@ estimation.
 
 \end{multicols*}
 
-\section*{Pin Descriptions}
+\section*{Connections}
 \usetikzlibrary{backgrounds,matrix}
 \tikzstyle{background grid}=[draw, black!50, step=.25cm]
 \tikzstyle{pinout}=[
@@ -170,7 +170,7 @@ estimation.
       |[pinnum]| 7 &  DEBUGB6 \\
       |[pinnum]| 8 &  DEBUGB7 \\
     };
-    \node [above of=debug_pins, node distance=1.65cm] (debug_label) {Debug Header};
+    \node [above of=debug_pins, node distance=1.65cm] (debug_label) {Debug \& Expansion Header};
     \draw[->] (debug_label) -| (debug);
     \node [pin1, right of=debug, node distance=2cm] {1};
     
@@ -195,7 +195,7 @@ estimation.
   \end{tikzpicture}
 \end{center}
 
-\begin{multicols}{2}
+\begin{multicols*}{2}
 \raggedcolumns
 
 \subsection*{USB}
@@ -204,30 +204,58 @@ Micro-USB socket provides USB connectivity to the host. This can be configured
 as a USB-Serial bridge to the microcontroller or as a high-speed FIFO
 interface to the SwiftNAP for streaming full-rate IF data samples to the host.
 
-\subsection*{Active Antenna}
+\subsection*{External Antenna}
 
-In addition to the on-board patch antenna an external active antenna input is
-provided on an SMA connector for higher performance and system integration
-flexibility.
+In addition to the on-board patch antenna, an external active antenna input is
+provided on an SMA connector and features a software switchable 3.3V bias.
+
+Selection between the on-board patch and the external antenna is made in
+software and can auto-detect the presence of an external active antenna.
 
 \subsection*{JTAG}
 
-0.05in pitch JTAG header allows access to SwiftNAP FPGA and microcontroller
-JTAG chains for debugging.
+No JTAG adapter is required to develop for the SwiftGNSS as the board is
+supplied with a built-in bootloader.
 
-\subsection*{Debug Header}
+For advanced debugging a 0.05'' pitch micro JTAG header compatible with the
+ARM Cortex-M standard pinout is provided on the board, allowing access to the
+SwiftNAP FPGA and STM32F4 microcontroller JTAG chains.
 
-Provides access to debugging signals from the SwiftNAP. Assignment of these
-signals varies depending on the SwiftNAP firmware loaded.
+\vspace{0.5cm}
+\begin{center}
+  \begin{tikzpicture}[auto, thick, text centered, node distance=1.5cm, >=stealth', font={\footnotesize}]
+    \node (tdi) {TDI};
+    \node [draw, rectangle, right of=tdi, text width=1.5cm, node distance=2cm] (nap) {SwiftNAP\\(Spartan6)};
+    \node [draw, rectangle, right of=nap, text width=1.5cm, node distance=2.5cm] (stm) {$\mu$C\\(STM32F4)};
+    \node [coordinate, right of=stm] (end) {};
+    \node [below of=tdi, node distance=1cm] (tdo) {TDO};
+    \draw[->] (tdi) -- (nap);
+    \draw[->] (nap) -- (stm);
+    \draw[-] (stm) -- (end);
+    \draw[->] (end) |- (tdo);
+  \end{tikzpicture}
+\end{center}
+
+\subsection*{Debug \& Expansion Header}
+
+Provides access to debugging signals from the SwiftNAP and I/O for future
+expansion boards and accessories. Assignment of these signals varies depending
+on the SwiftNAP firmware configuration.
 
 \subsection*{UARTs 1 \& 2}
 
 Provide high-speed 3.3V LVTTL level UART interfaces which can be configured to
 transmit NMEA or binary navigation solution data, system status and debugging
-information and receive commands or differential corrections from the host or another
-SwiftGNSS board.
+information and receive commands or differential corrections from the host or
+another SwiftGNSS board.
 
-\end{multicols}
+\subsection*{Power}
+
+Power may be supplied to the board either over USB or through the V+ pins on the
+UART connectors. A 3.3V output from the on-board switching regulator is
+provided to power any external peripherals.
+
+\end{multicols*}
 
 \pagebreak
 
