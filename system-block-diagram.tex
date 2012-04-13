@@ -11,18 +11,19 @@
 \begin{document}
 
 \tikzstyle{antenna} = [draw,isosceles triangle,minimum width=5mm,shape border rotate=300,color=red]
+\tikzstyle{block} = [draw, fill=orange!20, rectangle, minimum height=4em, minimum width=4em]
 
 %\section{Block Diagram}
 \begin{center}
-  \begin{tikzpicture}[auto, node distance=0.2cm,>=latex']
-    
+  \begin{tikzpicture}[auto, node distance=0.2cm,>=latex', every edge/.style={link}]
+
+    %Frontend
+    \node (frontend) at (0, 0) [block,text width=1.5cm] {Max2769 Frontend};
     %Antennas
     \node[antenna] (sma) at (-0.5,2.0) {};
     \draw let \p1=(sma.north) in ($(\x1+0mm, \y1+2mm)$) node{SMA};
     \node[antenna] (patch) at (0.5,2.0) {};
     \draw let \p1=(patch.north) in ($(\x1+0mm, \y1+2mm)$) node{Patch};
-    %Frontend
-    \node (frontend) at (0, 0) [block,text width=1.5cm] {Max2769 Frontend};
     %SwiftNAP internals
     \node[block] (filter) at (5.5,0) {};
     \node[block] (cw detection) [below left=of filter,text width=1.5cm] {CW\\Detection\\Correlator};
