@@ -1,0 +1,61 @@
+\documentclass{article}
+
+\usepackage{swiftnav}
+\usepackage{swiftnav_tikz}
+
+%\usetikzlibrary{calc,fit,matrix,positioning}
+
+\usetikzlibrary{shapes.geometric,shapes.arrows,decorations.pathmorphing}
+\usetikzlibrary{matrix,chains,scopes,positioning,arrows,fit,calc}
+
+\title{Swift Navigation Block Diagram}
+\author{Swift Navigation}
+
+\begin{document}
+
+\tikzstyle{antenna} = [draw,isosceles triangle,minimum width=5mm,shape border rotate=300,color=red]
+\tikzstyle{block} = [draw, fill=orange!20, rectangle, text width=1.6cm, minimum height=1.5cm, minimum width=1.5cm, line width=0.5pt]
+\def\filterSS{\node[block]{};
+  \draw[line width=1pt] (-4mm,-2mm) to[in=220,out=40] (4mm,-2mm) 
+                         (-4mm,0mm) to[in=220,out=40] (4mm,0mm) 
+                         (-4mm,2mm) to[in=220,out=40] (4mm,2mm)
+                         (-1mm,-1mm) to (1mm,1mm);}
+
+\begin{center}
+%  \begin{tikzpicture}[auto, >=latex', every edge/.style={link}]
+  \begin{tikzpicture}
+
+    %Draw blocks
+    \matrix (blocks) [matrix of nodes,
+      column sep=0.25cm,
+      row sep=0.25cm,
+      nodes={anchor=center}] 
+    {
+       |[block]| {MAX2769 Frontend} & & \filterSS \\
+       |[minimum width=4.0cm]| & |[block]| {CW \ \ \ Detection Correlator} & & |[block]| {Acquisition Correlator} & |[block]| {Tracking Correlator} & |[minimum width=1.0cm]| {} & |[block]| {FT232} \\
+       & & & & & & |[minimum height=0.0cm]| {} \\
+       & & & & & & |[block]| {STM32F4} \\
+    };
+    %Draw other tracking channel boxes, then redraw original
+    \draw let \p1=(blocks-2-5) in ($(\x1+3mm, \y1+3mm)$) node[block,text width=1.7cm] (trackback) {};
+    \draw let \p1=(blocks-2-5) in ($(\x1+1.5mm, \y1+1.5mm)$) node[block,text width=1.7cm] (trackmid) {};
+    \draw (blocks-2-5) node[block,text width=1.7cm] (trackfront) {Tracking Correlator};
+
+    %Place antennas to the left and above of frontend, label, and connect to frontend
+    \coordinate (antenna_y) at ($(blocks-1-1.north) + (0mm,5mm)$);
+    \coordinate (antenna_dest_x) at (blocks-1-1.west);
+    \node[antenna] (patch) [left of=antenna_y,node distance=1.5cm] {};
+    \draw let \p1=(patch.north) in ($(\x1+0mm, \y1+2mm)$) node{Patch};
+    \draw[->] (patch) |- ($(antenna_dest_x) + (0mm,2mm)$);
+    \node[antenna] (sma) [left of=antenna_y,node distance=2.5cm] {};
+    \draw let \p1=(sma.north) in ($(\x1+0mm, \y1+2mm)$) node{SMA};
+    \draw[->] (sma) |- ($(antenna_dest_x) + (0mm,-2mm)$);
+
+    %Draw labels for filter
+    \draw (blocks-1-3.north) node[above, inner sep=1mm] {IIR Filter};
+
+  \end{tikzpicture}
+  \captionof{figure}[ToC entry]{System Block Diagram}
+\end{center}
+
+\end{document} 
