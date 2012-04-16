@@ -192,6 +192,11 @@
     \path let \p0=(ftdi),\p1=(nap box.east) in coordinate (fifo dest) at ($(\x1,\y0)$);
     \draw[<->,color=black!100,thick] (ftdi.west) -- node[above,font=\scriptsize] {Hi-Speed FIFO} (fifo dest);
 
+    %SPI connections between STM and Frontend
+    \path let \p0=(stm.south) in coordinate (stm spi below) at ($(\x0,\y0) + (0mm,-6mm)$);
+    \draw[-,color=black!100,thick] (stm.south) -- (stm spi below);
+    \draw[->,color=black!100,thick] (stm spi below) -| node[above,near start] {SPI} (frontend.south);
+
   \end{tikzpicture}
   \captionof{figure}[ToC entry]{System Block Diagram}
 \end{center}
