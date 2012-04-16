@@ -3,7 +3,10 @@
 \usepackage{swiftnav}
 \usepackage{swiftnav_tikz}
 
-\usetikzlibrary{calc,fit}
+%\usetikzlibrary{calc,fit,matrix,positioning}
+
+\usetikzlibrary{shapes.geometric,shapes.arrows,decorations.pathmorphing}
+\usetikzlibrary{matrix,chains,scopes,positioning,arrows,fit,calc}
 
 \title{Swift Navigation Block Diagram}
 \author{Swift Navigation}
@@ -11,244 +14,183 @@
 \begin{document}
 
 \tikzstyle{antenna} = [draw,isosceles triangle,minimum width=5mm,shape border rotate=300,color=red]
-\tikzstyle{block} = [draw, fill=orange!20, rectangle, minimum height=4em, minimum width=4em]
+\tikzstyle{block} = [draw, fill=orange!20, rectangle, text width=1.5cm, minimum height=1.8cm, minimum width=1.8cm, line width=0.5pt]
+\def\filterSS{\node[block]{};
+  \draw[line width=1pt] (-4mm,-2mm) to[in=220,out=40] (4mm,-2mm) 
+                         (-4mm,0mm) to[in=220,out=40] (4mm,0mm) 
+                         (-4mm,2mm) to[in=220,out=40] (4mm,2mm)
+                         (-1mm,-1mm) to (1mm,1mm);}
+\tikzstyle{sbd_matrix} = [matrix of nodes,
+      column sep=0.4cm,
+      row sep=0.4cm,
+      anchor=center,
+      nodes={anchor=center}] 
 
-%\section{Block Diagram}
+\tikzstyle{blocks_matrix} = [matrix of nodes,
+      column sep=0.25cm,
+      row sep=0.25cm,
+      anchor=center,
+      nodes={anchor=center}] 
+
 \begin{center}
-  \begin{tikzpicture}[auto, node distance=0.2cm,>=latex', every edge/.style={link}]
+  \begin{tikzpicture}[point/.style={circle,inner sep=0pt,minimum size=2pt,fill=red},
+                      tip/.style={->,shorten >=1pt},
+                      hv path/.style={to path={-| (\tikztotarget)}},
+                      vh path/.style={to path={|- (\tikztotarget)}}]
 
-    %Frontend
-    \node (frontend) at (0, 0) [block,text width=1.5cm] {Max2769 Frontend};
-    %Antennas
-    \node[antenna] (sma) at (-0.5,2.0) {};
-    \draw let \p1=(sma.north) in ($(\x1+0mm, \y1+2mm)$) node{SMA};
-    \node[antenna] (patch) at (0.5,2.0) {};
-    \draw let \p1=(patch.north) in ($(\x1+0mm, \y1+2mm)$) node{Patch};
-    %SwiftNAP internals
-    \node[block] (filter) at (5.5,0) {};
-    \node[block] (cw detection) [below left=of filter,text width=1.5cm] {CW\\Detection\\Correlator};
-    \draw let \p1=(filter) in [line width=1.5pt] ($(\x1-4mm, \y1-3mm)$) %filter wavey lines
-                               to[in=220,out=40] ($(\x1+4mm, \y1-3mm)$);
-    \draw let \p1=(filter) in [line width=1.5pt] ($(\x1-4mm, \y1)$) 
-                               to[in=220,out=40] ($(\x1+4mm, \y1)$);
-    \draw let \p1=(filter) in [line width=1.5pt] ($(\x1-4mm, \y1+3mm)$) 
-                               to[in=220,out=40] ($(\x1+4mm, \y1+3mm)$);
-    \draw let \p1=(filter) in [line width=1.0pt] ($(\x1-1.5mm, \y1-1.5mm)$) %filter line slash
-                                              to ($(\x1+1.5mm, \y1+1.5mm)$);
-    \node[above] (filter label) at (filter.north) [inner sep=1.5mm] {IIR Filter};
-    \node[block] (acquisition) [below right=of filter,text width=1.7cm] {Acquisition\\Correlator};
-    %Tracking channels
-    \node[block] (trackfront) [right=of acquisition,text width=1.7cm] {Tracking\\Correlators};
-    \draw let \p1=(trackfront) in ($(\x1+3mm, \y1+3mm)$) node[block,text width=1.7cm] (trackback) {};
-    \draw let \p1=(trackfront) in ($(\x1+1.5mm, \y1+1.5mm)$) node[block,text width=1.7cm] (trackmiddle) {};
-    \node[block] (trackfront) [right=of acquisition,text width=1.7cm] {Tracking\\Correlators};
-    %STM
-    \node[block] (stm) at (15.0cm,-4.25cm) {STM32F4};
-    %FT232
-    \node[block] (ft232) [above of=stm, node distance=3cm] {FT232};
+    %Draw blocks
+    \matrix[blocks_matrix] (blocks) at (0,0) {
+       %First row
+       \node[block] (frontend) {MAX2769 Frontend}; & & \filterSS \\
+       %Second row
+       & \node[block] (cw) {CW \ \ \ Detection Correlator}; & & \node[block] (acq) {Acquisition Correlator}; & \node[block] (trackfront) {Tracking Correlators}; & & \node[block] (ftdi) {FT232}; \\
+       %Third row
+       |[minimum width=3.0cm]| & & & & & |[minimum width=2cm]| {} & |[minimum height=0.0cm]| {} \\
+       %Fourth row
+       & & & & & & \node[block] (stm) {STM32F4}; \\
+    };
+    %Assign filter to blocks-1-3
+    \coordinate (filter_west) at (blocks-1-3.west);
+    \coordinate (filter_east) at (blocks-1-3.east);
 
-    %Sample clock connections
-    %Define coordinates where clock branches off to individual channels
-    \path
-      let
-        \p0 = ($(cw detection) - (20mm,32mm)$),
-        \p1 = (filter),
-        \p2 = (acquisition),
-        \p3 = (trackfront),
-        \p4 = (stm.west)
-      in
-        coordinate (clock sig first seg dest) at (\p0)
-        coordinate (clock sig cw branch) at ($(cw detection) - (5mm,32mm)$)
-        coordinate (clock sig filter branch) at ($(\x1-2mm,\y0)$)
-        coordinate (clock sig acquisition branch) at ($(\x2-5mm,\y0)$)
-        coordinate (clock sig tracking branch) at ($(\x3-5mm,\y0)$)
-        coordinate (clock sig stm) at ($(\x4,\y0)$);
-    %Clock segments
-    \draw [-] ($(frontend.east) + (0,-0.25)$) -| node[name=clock sig first seg,very near end,right,rotate=90] {} (clock sig first seg dest);
-    \draw [-] (clock sig first seg dest) -- (clock sig cw branch);
-    \draw [->] (clock sig cw branch) -- ($(cw detection.south)-(5mm,0)$);
-    \draw [-] (clock sig cw branch) -- (clock sig filter branch);
-    \draw [->] (clock sig filter branch) -- ($(filter.south)-(2mm,0)$);
-    \draw [-] (clock sig filter branch) -- (clock sig acquisition branch);
-    \draw [->] (clock sig acquisition branch) -- ($(acquisition.south)-(5mm,0)$);
-    \draw [-] (clock sig acquisition branch) -- (clock sig tracking branch);
-    \draw [->] (clock sig tracking branch) -- ($(trackfront.south)-(5mm,0)$);
-    \draw [->] (clock sig tracking branch) -- node[name=clock track stm line] {} (clock sig stm);
-    %Clock signal labels
-    \node[below] (clock sig first seg label) [right of=clock sig first seg, rotate=90] {Frontend Clock};
-    \path
-      let
-        \p0 = (clock track stm line),
-        \p1 = (stm.west)
-      in
-        coordinate (clock label) at ($(\x1,\y0+0.5mm)$);
-    \node (clock track stm line label) [left of=clock label,node distance=1.3cm] {Frontend Clock};
-
-    %Box around SwiftNAP internals
-    \tikzset{blue dotted/.style={draw=green!100!white, line width=1pt,
-                                 dash pattern=on 1pt off 4pt on 6pt off 4pt,
-                                 inner sep=2mm, rectangle, rounded corners}};
-    \node (nap box) [blue dotted, 
-                       fit = (clock sig first seg dest) (filter label) (trackback)] {};
-    \node at (nap box.north) [above, inner sep=1mm] {SwiftNAP (Spartan 6)};
-
-    %Interrupt line connections
-    \path
-      let
-        \p0 = ($(cw detection) - (2mm,28mm)$),
-        \p1 = ($(filter) - (2mm,0mm)$),
-        \p2 = ($(acquisition) - (2mm,0mm)$),
-        \p3 = ($(trackfront) - (2mm,0mm)$),
-        \p4 = ($(nap box.east)$),
-        \p5 = ($(stm.west)$)
-      in
-        coordinate (irq sig cw branch) at (\p0)
-        coordinate (irq sig filter) at ($(\x1,\y0)$)
-        coordinate (irq sig acquisition) at ($(\x2,\y0)$)
-        coordinate (irq sig trackfront) at ($(\x3,\y0)$)
-        coordinate (irq sig nap box) at ($(\x4,\y0)$)
-        coordinate (irq sig stm) at ($(\x5,\y0)$);
-    \draw [-,color=red!100] ($(cw detection.south) - (2mm,0mm)$) -- (irq sig cw branch);
-    \draw [-,color=red!100] (irq sig cw branch) -- (irq sig acquisition);
-    \draw [-,color=red!100] ($(acquisition.south) - (2mm,0mm)$) -- (irq sig acquisition);
-    \draw [-,color=red!100] (irq sig acquisition) -- (irq sig trackfront);
-    \draw [-,color=red!100] ($(trackfront.south) - (2mm,0mm)$) -- (irq sig trackfront);
-    \draw [-,color=red!100] (irq sig trackfront) -- (irq sig nap box);
-    \draw [->,color=red!100] (irq sig nap box) -- node[name=irq box stm line] {} (irq sig stm);
-    \path
-      let
-        \p0 = (irq box stm line),
-        \p1 = (stm.west)
-      in
-        coordinate (irq label) at ($(\x1,\y0)$);
-    \node (irq box stm line label) [left of=irq label,node distance=1.3cm] {IRQ};
-
-    %Timing Strobe connections
-    \path
-      let
-        \p0 = ($(cw detection) + (1mm,-24mm)$),
-        \p1 = ($(filter) + (1mm,0mm)$),
-        \p2 = ($(acquisition) + (1mm,0mm)$),
-        \p3 = ($(trackfront) + (1mm,0mm)$),
-        \p4 = ($(nap box.east)$),
-        \p5 = ($(stm.west)$)
-      in
-        coordinate (timstrb sig cw branch) at (\p0)
-        coordinate (timstrb sig filter) at ($(\x1,\y0)$)
-        coordinate (timstrb sig acquisition) at ($(\x2,\y0)$)
-        coordinate (timstrb sig trackfront) at ($(\x3,\y0)$)
-        coordinate (timstrb sig nap box) at ($(\x4,\y0)$)
-        coordinate (timstrb sig stm) at ($(\x5,\y0)$);
-    \draw [->,color=blue!100] (timstrb sig cw branch) -- ($(cw detection.south) + (1mm,0mm)$);
-    \draw [-,color=blue!100] (timstrb sig cw branch) -- (timstrb sig acquisition);
-    \draw [->,color=blue!100] (timstrb sig acquisition) -- ($(acquisition.south) + (1mm,0mm)$);
-    \draw [-,color=blue!100] (timstrb sig acquisition) -- (timstrb sig trackfront);
-    \draw [->,color=blue!100] (timstrb sig trackfront) -- ($(trackfront.south) + (1mm,0mm)$);
-    \draw [-,color=blue!100] (timstrb sig trackfront) -- (timstrb sig nap box);
-    \draw [<-,color=blue!100] (timstrb sig nap box) -- node[name=timstrb box stm line] {} (timstrb sig stm);
-    \path
-      let
-        \p0 = (timstrb box stm line),
-        \p1 = (stm.west)
-      in
-        coordinate (timstrb label) at ($(\x1,\y0)$);
-    \node (timstrb box stm line label) [left of=timstrb label,node distance=1.3cm] {Timing Strobe};
-
-    %SPI connections
-    \path
-      let
-        \p0 = ($(cw detection) + (5mm,-20mm)$),
-        \p1 = ($(filter) + (2mm,0mm)$),
-        \p2 = ($(acquisition) + (5mm,0mm)$),
-        \p3 = ($(trackfront) + (5mm,0mm)$),
-        \p4 = ($(nap box.east)$),
-        \p5 = ($(stm.west)$)
-      in
-        coordinate (spi sig cw branch) at (\p0)
-        coordinate (spi sig filter) at ($(\x1,\y0)$)
-        coordinate (spi sig acquisition) at ($(\x2,\y0)$)
-        coordinate (spi sig trackfront) at ($(\x3,\y0)$)
-        coordinate (spi sig nap box) at ($(\x4,\y0)$)
-        coordinate (spi sig stm) at ($(\x5,\y0)$);
-    \draw [<->,color=orange!100,thick] (spi sig cw branch) -- ($(cw detection.south) + (5mm,0mm)$);
-    \draw [-,color=orange!100,thick] (spi sig cw branch) -- (spi sig filter);
-    \draw [->,color=orange!100,thick] (spi sig filter) -- ($(filter.south) + (2mm,0mm)$);
-    \draw [-,color=orange!100,thick] (spi sig filter) -- (spi sig acquisition);
-    \draw [<->,color=orange!100,thick] (spi sig acquisition) -- ($(acquisition.south) + (5mm,0mm)$);
-    \draw [-,color=orange!100,thick] (spi sig acquisition) -- (spi sig trackfront);
-    \draw [<->,color=orange!100,thick] (spi sig trackfront) -- ($(trackfront.south) + (5mm,0mm)$);
-    \draw [-,color=orange!100,thick] (spi sig trackfront) -- (spi sig nap box);
-    \draw [<->,color=orange!100,thick] (spi sig nap box) -- node[name=spi box stm line] {} (spi sig stm);
-    \path
-      let
-        \p0 = (spi box stm line),
-        \p1 = (stm.west)
-      in
-        coordinate (spi label) at ($(\x1,\y0)$);
-    \node (spi box stm line label) [left of=spi label,node distance=1.3cm] {SPI};
-
-    %SPI between STM and MAX2769
+    %Set up coordinates for signals below each block
     \path
       let 
-        \p1=(stm.south)
+        \p0=(cw),\p1=(blocks-1-3),\p2=(acq),\p3=(trackfront),\p4=(stm)
       in
-        coordinate (below stm) at ($(\x1,\y1) - (0cm,0.75cm)$);
-    \draw [-,color=black!100,thick] (stm.south) -| (below stm);
-    \draw [->,color=black!100,thick] (below stm) -| node[name=frontend spi,near start] {SPI} (frontend);
+        coordinate (cw nodes center) at ($(\x0,\y4)$)
+        coordinate (filter nodes center) at ($(\x1,\y4)$)
+        coordinate (acq nodes center) at ($(\x2,\y4)$)
+        coordinate (track nodes center) at ($(\x3,\y4)$);
 
-    %STM to FT232
-    \draw [<->] (stm) -- node[right] {UART3} (ft232);
+    %CW signal connections
+    \matrix[sbd_matrix] (cw nodes south) at (cw.south) {
+      |[coordinate]| & |[coordinate]| & |[coordinate]| & |[coordinate]| \\};
+    \matrix[sbd_matrix] (cw nodes below) at (cw nodes center) {
+       & & & |[coordinate]| \\
+       & & |[coordinate]| & \\
+       & |[coordinate]| & & \\
+       |[coordinate]| & & & \\};
 
-    %FT232 USB and STM32 UARTs
+    %Filter signal connections
+    \matrix[sbd_matrix] (filter nodes south) at (blocks-1-3.south) {
+      |[coordinate]| & |[coordinate]| & |[coordinate]| & |[coordinate]| \\};
+    \matrix[sbd_matrix] (filter nodes below) at (filter nodes center) {
+       & & & |[coordinate]| \\
+       & & |[coordinate]| & \\
+       & |[coordinate]| & & \\
+       |[coordinate]| & & & \\};
+
+    %Acq signal connections
+    \matrix[sbd_matrix] (acq nodes south) at (acq.south) {
+      |[coordinate]| & |[coordinate]| & |[coordinate]| & |[coordinate]| \\};
+    \matrix[sbd_matrix] (acq nodes below) at (acq nodes center) {
+       & & & |[coordinate]| \\
+       & & |[coordinate]| & \\
+       & |[coordinate]| & & \\
+       |[coordinate]| & & & \\};
+
+    %Tracking signal connections
+    \matrix[sbd_matrix] (track nodes south) at (trackfront.south) {
+      |[coordinate]| & |[coordinate]| & |[coordinate]| & |[coordinate]| \\};
+    \matrix[sbd_matrix] (track nodes below) at (track nodes center) {
+       & & & |[coordinate]| \\
+       & & |[coordinate]| & \\
+       & |[coordinate]| & & \\
+       |[coordinate]| & & & \\};
+
+    %STM signal connections
+    \matrix[sbd_matrix] (stm west) at (stm.west) {
+      |[coordinate]| \\ |[coordinate]| \\ |[coordinate]| \\ |[coordinate]| \\};
+
+    %Label for filter
+    \draw (blocks-1-3.north) node[above, name=filter label, inner sep=1mm] {IIR Filter};
+
+    %Other tracking channel boxes, then redraw original
+    \draw let \p1=(trackfront) in ($(\x1+3mm, \y1+3mm)$) node[block,text width=1.7cm] (trackback) {};
+    \draw let \p1=(trackfront) in ($(\x1+1.5mm, \y1+1.5mm)$) node[block,text width=1.7cm] (trackmid) {};
+    \draw (trackfront) node[block,text width=1.7cm] (trackfront) {Tracking Correlators};
+
+    %Frontend clock initial segment
+    \path let \p0=(frontend.east) in 
+       coordinate(clock sig first seg dest) at ($(\x0,\y0)+(5mm,-5mm)$)
+       coordinate(clock sig first seg orig) at ($(\x0,\y0)+(0mm,-5mm)$);
+    \draw[-,color=black!100,thick] (clock sig first seg orig) -- node[right,very near end,font=\scriptsize,text width=1cm] {Frontend\\Clock} (clock sig first seg dest);
+    \draw[-,color=black!100,thick] (clock sig first seg dest) |- node[name=clock sig downward] {} (cw nodes below-4-1);
+
+    %Box around SwiftNAP internals
+    \tikzset{green dotted/.style={draw=green!100!white, line width=1pt,
+                                 dash pattern=on 1pt off 4pt on 6pt off 4pt,
+                                 inner sep=2mm, rectangle, rounded corners}};
+    \node (nap box) [green dotted, fit = (clock sig downward) (trackback) (filter label) (track nodes below-4-1)] {};
+    \node at (nap box.north) [above, inner sep=1mm] {SwiftNAP (Spartan 6)};
+
+    %Signal coordinate on box line
     \path
-      let
-        \p1=(ft232.east),
-        \p2=(stm.east),
-        \p3=($(ft232.east) + (1.5cm,0cm)$)
-      in
-        coordinate (ft232 usb start) at ($(\x1,\y1)$)
-        coordinate (ft232 usb dest) at ($(\x3,\y1)$)
-        coordinate (stm uart1 start) at ($(\x2,\y2+3mm)$)
-        coordinate (stm uart1 dest) at ($(\x3,\y2+3mm)$)
-        coordinate (stm uart2 start) at ($(\x2,\y2-3mm)$)
-        coordinate (stm uart2 dest) at ($(\x3,\y2-3mm)$);
-    \draw [<->] (ft232 usb start) -- node[above] {USB} (ft232 usb dest);
-    \draw [<->] (stm uart1 start) -- node[above] {UART1} (stm uart1 dest);
-    \draw [<->] (stm uart2 start) -- node[above] {UART2} (stm uart2 dest);
-    
-    %FT232 to NAP
-    \path 
-      let
-        \p0=(nap box.east),
-        \p1=(ft232.west)
-      in
-        coordinate (fifo nap dest) at ($(\x0,\y1)$);
-    \draw [<->] (fifo nap dest) -- node[above] {Hi-Speed FIFO} (ft232);
+      let \p0=(stm),\p1=(nap box.east)
+      in coordinate (box nodes center) at ($(\x1,\y0)$);
+    \matrix[sbd_matrix] (box nodes) at (box nodes center){
+      |[coordinate]| \\ |[coordinate]| \\ |[coordinate]| \\ |[coordinate]| \\};
 
-    %Patch and SMA connections
-    \path
-      let
-        \p0=(patch),
-        \p1=(sma),
-        \p2=(frontend.north)
-      in
-        coordinate (patch dest) at (\x0,\y2)
-        coordinate (sma dest) at (\x1,\y2);
-    \draw [->] (patch) -- (patch dest);
-    \draw [->] (sma) -- (sma dest);
+    %Place antennas to the left and above of frontend, label, and connect to frontend
+    \coordinate (antenna_y) at ($(frontend.north) + (0mm,5mm)$);
+    \coordinate (antenna_dest_x) at (frontend.west);
+    \node[antenna] (patch) [left of=antenna_y,node distance=1.5cm] {};
+    \draw let \p1=(patch.north) in ($(\x1+0mm, \y1+2mm)$) node{Patch};
+    \draw[->,color=black!100,thick] (patch) |- ($(antenna_dest_x) + (0mm,2mm)$);
+    \node[antenna] (sma) [left of=antenna_y,node distance=2.5cm] {};
+    \draw let \p1=(sma.north) in ($(\x1+0mm, \y1+2mm)$) node{SMA};
+    \draw[->,color=black!100,thick] (sma) |- ($(antenna_dest_x) + (0mm,-2mm)$);
 
-    \draw [->] (frontend) -- node[name=fe2filter] {3 bit samples} (filter);
-    \path
-      let
-        \p0=(fe2filter),
-        \p1=(cw detection.north)
-      in
-        coordinate (midpoint) at ($(\x1,\y0-2.75mm)$);
-    \draw [->] (midpoint) -- (cw detection.north);
-    \draw [->] (filter) -| node[name=filter2acquisition] {} (acquisition);
-    \coordinate [above of=trackmiddle,node distance=9mm] (trackarrowdest);
-    \draw [->] (filter2acquisition.west) -| node[name=filter2tracking] {} (trackarrowdest);
-    \node[above] (postfiltersamples) at (filter2acquisition) {1 bit filtered};
+    %Data signal connections
+    \draw[->,thick] (frontend) -| node[above,font=\scriptsize] {3 bit samples} (cw);
+    \path let \p0=(frontend),\p1=(cw) in coordinate (filter data sig orig) at ($(\x1,\y0)$);
+    \draw[->,thick] (filter data sig orig) -- (filter_west);
+    \draw[->,thick] (filter_east) -| (acq);
+    \path let \p0=(filter_east),\p1=(acq),\p2=(trackmid),\p3=(trackback.north) in 
+      coordinate (track data sig orig) at ($(\x1,\y0)$)
+      coordinate (track data sig dest) at ($(\x2,\y3)$);
+    \draw[->,thick] (track data sig orig) -| node[above,near start,font=\scriptsize] {1 bit filtered} (track data sig dest);
+
+    %Clock signal connections
+    \draw[->,color=black!100,thick] (cw nodes below-4-1) -- (cw nodes south-1-1);
+    \draw[->,color=black!100,thick] (filter nodes below-4-1) -- (filter nodes south-1-1);
+    \draw[->,color=black!100,thick] (acq nodes below-4-1) -- (acq nodes south-1-1);
+    \draw[->,color=black!100,thick] (track nodes below-4-1) -- (track nodes south-1-1);
+    \draw[-,color=black!100,thick] (cw nodes below-4-1) -- (box nodes-4-1);
+    \draw[->,color=black!100,thick] (box nodes-4-1) -- node[above,font=\scriptsize] {Frontend Clock} (stm west-4-1);
+    %Interrupt line connections
+    \draw[<-,color=orange!100,thick] (cw nodes below-3-2) -- (cw nodes south-1-2);
+    \draw[<-,color=orange!100,thick] (filter nodes below-3-2) -- (filter nodes south-1-2);
+    \draw[<-,color=orange!100,thick] (acq nodes below-3-2) -- (acq nodes south-1-2);
+    \draw[<-,color=orange!100,thick] (track nodes below-3-2) -- (track nodes south-1-2);
+    \draw[-,color=orange!100,thick] (cw nodes below-3-2) -- (box nodes-3-1);
+    \draw[->,color=orange!100,thick] (box nodes-3-1) -- node[above,font=\scriptsize,color=black] {IRQ} (stm west-3-1);
+    %Timing strobe line connections
+    \draw[->,color=blue!100,thick] (cw nodes below-2-3) -- (cw nodes south-1-3);
+    \draw[->,color=blue!100,thick] (filter nodes below-2-3) -- (filter nodes south-1-3);
+    \draw[->,color=blue!100,thick] (acq nodes below-2-3) -- (acq nodes south-1-3);
+    \draw[->,color=blue!100,thick] (track nodes below-2-3) -- (track nodes south-1-3);
+    \draw[-,color=blue!100,thick] (cw nodes below-2-3) -- (box nodes-2-1);
+    \draw[<-,color=blue!100,thick] (box nodes-2-1) -- node[above,font=\scriptsize,color=black] {Timing Strobe} (stm west-2-1);
+    %SPI 
+    \draw[<->,color=red!100,thick] (cw nodes below-1-4) -- (cw nodes south-1-4);
+    \draw[<->,color=red!100,thick] (filter nodes below-1-4) -- (filter nodes south-1-4);
+    \draw[<->,color=red!100,thick] (acq nodes below-1-4) -- (acq nodes south-1-4);
+    \draw[<->,color=red!100,thick] (track nodes below-1-4) -- (track nodes south-1-4);
+    \draw[-,color=red!100,thick] (cw nodes below-1-4) -- (box nodes-1-1);
+    \draw[<->,color=red!100,thick] (box nodes-1-1) -- node[above,font=\scriptsize,color=black] {SPI} (stm west-1-1);
+    %UART between STM and FT232
+    \draw[<->,color=black!100,thick] (stm) -- node[right,font=\scriptsize] {UART3} (ftdi);
+    %Off page UARTs
+    \draw[<->,color=black!100,thick] ($(stm.east) + (0mm,3mm)$) -- node[above,font=\scriptsize] {UART1} ($(stm.east) + (10mm,3mm)$);
+    \draw[<->,color=black!100,thick] ($(stm.east) + (0mm,-3mm)$) -- node[above,font=\scriptsize] {UART2} ($(stm.east) + (10mm,-3mm)$);
+    %Off page USB 
+    \draw[<->,color=black!100,thick] (ftdi.east) -- node[above,font=\scriptsize] {USB} ($(ftdi.east) + (10mm,0mm)$);
+
+    %Hi Speed FIFO between FT232 and nap box
+    \path let \p0=(ftdi),\p1=(nap box.east) in coordinate (fifo dest) at ($(\x1,\y0)$);
+    \draw[<->,color=black!100,thick] (ftdi.west) -- node[above,font=\scriptsize] {Hi-Speed FIFO} (fifo dest);
 
   \end{tikzpicture}
   \captionof{figure}[ToC entry]{System Block Diagram}
