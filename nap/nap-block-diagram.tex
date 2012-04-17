@@ -1,0 +1,171 @@
+\documentclass{article}
+
+\usepackage{../swiftnav}
+\usepackage{../swiftnav_tikz}
+
+\usetikzlibrary{shapes.geometric,shapes.arrows,decorations.pathmorphing}
+\usetikzlibrary{matrix,chains,scopes,positioning,arrows,fit,calc}
+
+\title{SwiftNAP Block Diagram}
+\author{Swift Navigation}
+
+\begin{document}
+
+\tikzstyle{antenna} = [draw,isosceles triangle,minimum width=5mm,shape border rotate=300,color=red]
+\tikzstyle{block} = [draw, fill=orange!20, rectangle, text width=1.5cm, minimum height=1.8cm, minimum width=1.8cm, line width=0.5pt]
+\def\filterSS{\node[block]{};
+  \draw[line width=1pt] (-4mm,-2mm) to[in=220,out=40] (4mm,-2mm) 
+                         (-4mm,0mm) to[in=220,out=40] (4mm,0mm) 
+                         (-4mm,2mm) to[in=220,out=40] (4mm,2mm)
+                        (-1mm,-1mm) to (1mm,1mm);}
+\tikzstyle{connection_matrix} = [matrix of nodes,
+      column sep=0.45cm,
+      row sep=0.45cm,
+      anchor=center,
+      nodes={anchor=center}] 
+
+\tikzstyle{blocks_matrix} = [matrix of nodes,
+      column sep=0.25cm,
+      row sep=0.25cm,
+      anchor=center,
+      nodes={anchor=center}] 
+
+\begin{center}
+  \begin{tikzpicture}[point/.style={circle,inner sep=0pt,minimum size=2pt,fill=red},
+                      tip/.style={->,shorten >=1pt}]
+
+    %Draw blocks
+    \matrix[blocks_matrix] (blocks) at (0,0) {
+       %First row
+       \node[below] (from frontend) {From Frontend}; & \node[minimum width=1.0cm] {}; & & \filterSS & & \\
+       %Second row
+       & & \node[block] (cw) {CW \ \ \ Detection Correlator}; & & \node[block] (acq) {Acquisition Correlator}; & \node[block] (trackfront) {Tracking Correlators}; & \node[minimum width=2cm] {}; & \\
+       %Third row
+       & & \node[] (cw nodes center) {}; & \node[] (filter nodes center) {}; & \node[] (acq nodes center) {}; & \node[] (track nodes center) {}; & \node[] (nap stm arrows center) {}; & \node[minimum height=3cm] (to stm center) {}; \\
+    };
+    %"To STM" label
+    \node[right of=to stm center] {To STM};
+    %Assign filter to blocks-1-4
+    \coordinate (filter_west) at (blocks-1-4.west);
+    \coordinate (filter_east) at (blocks-1-4.east);
+    \coordinate (filter_south) at (blocks-1-4.south);
+    \coordinate (filter_north) at (blocks-1-4.north);
+
+    %CW signal connections
+    \matrix[connection_matrix] (cw nodes south) at (cw.south) {
+      |[coordinate]| & |[coordinate]| & |[coordinate]| & |[coordinate]| \\};
+    \matrix[connection_matrix] (cw nodes below) at (cw nodes center) {
+       & |[coordinate]| & & & & |[coordinate]| \\
+       & & & & |[coordinate]| & \\
+       & & & |[coordinate]| & & \\
+       & & |[coordinate]| & & & \\
+       & |[coordinate]| & & & & \\
+       |[coordinate]| & & & & & \\};
+
+    %Filter signal connections
+    \matrix[connection_matrix] (filter nodes south) at (filter_south) {
+      |[coordinate]| & |[coordinate]| & |[coordinate]| & |[coordinate]| \\};
+    \matrix[connection_matrix] (filter nodes below) at (filter nodes center) {
+       & |[coordinate]| & & & & |[coordinate]| \\
+       & & & & |[coordinate]| & \\
+       & & & |[coordinate]| & & \\
+       & & |[coordinate]| & & & \\
+       & |[coordinate]| & & & & \\
+       |[coordinate]| & & & & & \\};
+
+    %Acq signal connections
+    \matrix[connection_matrix] (acq nodes south) at (acq.south) {
+      |[coordinate]| & |[coordinate]| & |[coordinate]| & |[coordinate]| \\};
+    \matrix[connection_matrix] (acq nodes below) at (acq nodes center) {
+       & |[coordinate]| & & & & |[coordinate]| \\
+       & & & & |[coordinate]| & \\
+       & & & |[coordinate]| & & \\
+       & & |[coordinate]| & & & \\
+       & |[coordinate]| & & & & \\
+       |[coordinate]| & & & & & \\};
+
+    %Tracking signal connections
+    \matrix[connection_matrix] (track nodes south) at (trackfront.south) {
+      |[coordinate]| & |[coordinate]| & |[coordinate]| & |[coordinate]| \\};
+    \matrix[connection_matrix] (track nodes below) at (track nodes center) {
+       & & & & & |[coordinate]| \\
+       & & & & |[coordinate]| & \\
+       & & & |[coordinate]| & & \\
+       & & |[coordinate]| & & & \\
+       & |[coordinate]| & & & & \\
+       |[coordinate]| & & & & & \\};
+
+    %STM signal connections
+    \matrix[connection_matrix] (nap nodes) at (nap stm arrows center) {
+      |[coordinate]| \\ |[coordinate]| \\ |[coordinate]| \\ |[coordinate]| \\};
+    \matrix[connection_matrix] (stm nodes) at (to stm center) {
+      |[coordinate]| \\ |[coordinate]| \\ |[coordinate]| \\ |[coordinate]| \\};
+
+    %Label for filter
+    \draw (filter_north) node[above, name=filter label, inner sep=1mm] {IIR Filter};
+
+    %Other tracking channel boxes, then redraw original
+    \draw let \p1=(trackfront) in ($(\x1+3mm, \y1+3mm)$) node[block,text width=1.7cm] (trackback) {};
+    \draw let \p1=(trackfront) in ($(\x1+1.5mm, \y1+1.5mm)$) node[block,text width=1.7cm] (trackmid) {};
+    \draw (trackfront) node[block,text width=1.7cm] (trackfront) {Tracking Correlators};
+
+    %Frontend clock initial segment and frontend data connections
+    \path let \p0=(from frontend),\p1=(filter_west) in 
+       coordinate(clock sig first seg orig) at ($(\x0,\y1) + (15mm,-6mm)$)
+       coordinate(clock sig first seg dest) at ($(\x0,\y1) + (20mm,-6mm)$)
+       coordinate(frontend data orig) at ($(\x0,\y1) + (15mm,0mm)$);
+    \draw[>-,color=black!100,thick] (clock sig first seg orig) -- node[right,very near end,font=\scriptsize,text width=1cm] {Frontend\\Clock} (clock sig first seg dest);
+    \draw[-,color=black!100,thick] (clock sig first seg dest) |- node[name=clock sig downward] {} (cw nodes below-5-2);
+    \draw[>->,thick] (frontend data orig) -| node[above,font=\scriptsize] {3 bit samples} (cw);
+    \path let \p0=(frontend data orig),\p1=(cw) in coordinate (filter data sig orig) at ($(\x1,\y0)$);
+    \draw[->,thick] (filter data sig orig) -- (filter_west);
+
+    %Data signal connections
+    \draw[->,thick] (filter_east) -| (acq);
+    \path let \p0=(filter_east),\p1=(acq),\p2=(trackmid),\p3=(trackback.north) in 
+      coordinate (track data sig orig) at ($(\x1,\y0)$)
+      coordinate (track data sig dest) at ($(\x2,\y3)$);
+    \draw[->,thick] (track data sig orig) -| node[above,near start,font=\scriptsize] {1 bit filtered} (track data sig dest);
+
+    %Clock signal multipliers
+    \node[block] (cw multiplier) at (cw nodes below-1-2) [minimum width=5mm,minimum height=5mm,text width=3mm] {x3};
+    \node[block] (filter multiplier) at (filter nodes below-1-2) [minimum width=5mm,minimum height=5mm,text width=3mm] {x4};
+    \node[block] (acq multiplier) at (acq nodes below-1-2) [minimum width=5mm,minimum height=5mm,text width=3mm] {x5};
+
+    %Interrupt line connections
+    \draw[<-,color=orange!100,thick] (cw nodes below-4-3) -- (cw nodes south-1-2);
+    \draw[<-,color=orange!100,thick] (filter nodes below-4-3) -- (filter nodes south-1-2);
+    \draw[<-,color=orange!100,thick] (acq nodes below-4-3) -- (acq nodes south-1-2);
+    \draw[<-,color=orange!100,thick] (track nodes below-4-3) -- (track nodes south-1-2);
+    \draw[-,color=orange!100,thick] (cw nodes below-4-3) -- (nap nodes-3-1);
+    \draw[>->,color=orange!100,thick] (nap nodes-3-1) -- node[above,font=\scriptsize,color=black] {IRQ} (stm nodes-3-1);
+    %Timing strobe line connections
+    \draw[->,color=blue!100,thick] (cw nodes below-3-4) -- (cw nodes south-1-3);
+    \draw[->,color=blue!100,thick] (filter nodes below-3-4) -- (filter nodes south-1-3);
+    \draw[->,color=blue!100,thick] (acq nodes below-3-4) -- (acq nodes south-1-3);
+    \draw[->,color=blue!100,thick] (track nodes below-3-4) -- (track nodes south-1-3);
+    \draw[-,color=blue!100,thick] (cw nodes below-3-4) -- (nap nodes-2-1);
+    \draw[<-<,color=blue!100,thick] (nap nodes-2-1) -- node[above,font=\scriptsize,color=black] {Timing Strobe} (stm nodes-2-1);
+    %SPI 
+    \draw[<->,color=red!100,thick] (cw nodes below-2-5) -- (cw nodes south-1-4);
+    \draw[<->,color=red!100,thick] (filter nodes below-2-5) -- (filter nodes south-1-4);
+    \draw[<->,color=red!100,thick] (acq nodes below-2-5) -- (acq nodes south-1-4);
+    \draw[<->,color=red!100,thick] (track nodes below-2-5) -- (track nodes south-1-4);
+    \draw[-,color=red!100,thick] (cw nodes below-2-5) -- (nap nodes-1-1);
+    \draw[<->,color=red!100,thick] (nap nodes-1-1) -- node[above,font=\scriptsize,color=black] {SPI} (stm nodes-1-1);
+    %Clock signal connections
+    \draw[-,color=black!100,thick] (cw nodes below-5-2) -- (cw multiplier);
+    \draw[->,color=black!100,thick] (cw multiplier) -- (cw nodes south-1-1);
+    \draw[-,color=black!100,thick] (filter nodes below-5-2) -- (filter multiplier);
+    \draw[->,color=black!100,thick] (filter multiplier) -- (filter nodes south-1-1);
+    \draw[-,color=black!100,thick] (acq nodes below-5-2) -- (acq multiplier);
+    \draw[->,color=black!100,thick] (acq multiplier) -- (acq nodes south-1-1);
+    \draw[->,color=black!100,thick] (track nodes below-5-2) -- (track nodes south-1-1);
+    \draw[-,color=black!100,thick] (cw nodes below-5-2) -- (nap nodes-4-1);
+    \draw[>->,color=black!100,thick] (nap nodes-4-1) -- node[above,font=\scriptsize,color=black] {Frontend Clock} (stm nodes-4-1);
+
+  \end{tikzpicture}
+  \captionof{figure}[ToC entry]{SwiftNAP Block Diagram}
+\end{center}
+
+\end{document} 
