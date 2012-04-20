@@ -2,6 +2,8 @@
 
 \usepackage{../swiftnav}
 \usepackage{../swiftnav_tikz}
+%\usepackage{calc}
+\usepackage{tikz-timing}
 
 \rhead{Swift Navigation NAP}
 
@@ -16,11 +18,36 @@
 \usetikzlibrary{scopes,positioning,arrows}
 
 \version{2.2.0}
-\title{Swift Navigation NAP\\(Navigation/Acquisition Processor)}
+\title{Swift Navigation NAP\\(Navigation Acceleration Peripheral)}
 \author{Swift Navigation}
 \date{\today}
 
 \begin{document}
+
+\newcommand{\samplebits}{3}
+\newcommand{\feclkfreq}{16.368}
+\newcommand{\samplesperms}{16368}
+\newcommand{\spiclkfreqs}{8.184, 16.368, 32.736, 49.104, 65.472, and 81.840 MHz}
+
+\newcommand{\numtrackchans}{12}
+
+\newcommand{\acqntaps}{16}
+\newcommand{\acqfreqmult}{3}
+\newcommand{\acqfreqmhz}{49.104}
+\newcommand{\acqspeed}{80}
+\newcommand{\acqlength}{49104}
+
+\newcommand{\cwfreqmult}{4}
+\newcommand{\cwfreqmhz}{65.472}
+\newcommand{\cwgranularityhz}{15}
+\newcommand{\cwlength}{65472}
+
+\newcommand{\iirntaps}{5}
+\newcommand{\iirfreqmhz}{81.840}
+\newcommand{\iirnbits}{10}
+
+\newcommand{\numcorrelators}{88}
+\newcommand{\numgmaccs}{2.88}
 
 \maketitle
 
@@ -29,31 +56,32 @@
 
 \section*{Overview}
 
-The Swift Navigation NAP (Navigation/Acquisition Processor) is a multi-function 
-hardware accelerator, implemented using a Xilinx Spartan 6 FPGA, for the lowest levels 
-of signal processing in the Swift Navigation GNSS Receiver. It groups correlators into 
-channels with specific purposes while allowing the user a large amount of control and 
-flexibility.
+The Swift Navigation NAP (Navigation Acceleration Peripheral) is a multi-function hardware accelerator, implemented using a Xilinx Spartan 6 FPGA (Field-Programmable Gate Array), for the lowest levels of signal processing in the Swift Navigation GNSS Receiver. It groups correlators into channels with specific purposes while allowing the user a large amount of control and flexibility.
 
-The Swift NAP includes 12?? tracking channels with lower level interfaces, each containing 
-6 correlators : one each for early I, early Q, prompt I, prompt Q, late i, and late q (half 
-chip??variable spacing). It includes one serial search acquisition channel that searches 15?? 
-code phases in parallel (half chip spacing), at 81.84?? MHz (5x sample clock), which gives 
-an acquisition speed 75x?? that of real time. In addition, it includes a spectrum power 
-analyzation channel for detecting continuous wave interference, and a 5?? tap IIR filter for 
-continuous-wave rejection between the frontend samples and the acquisition and tracking channels.
+The SwiftNAP includes \numtrackchans\ tracking channels with low level interfaces, each containing 6 channels : one each for early I, early Q, prompt I, prompt Q, late i, and late q (half chip spacing). It includes one serial search acquisition correlator that searches \acqntaps\ consecutive code phases in parallel (quarter chip spacing), at \acqfreqmult x the sample clock, giving a \acqspeed x acquisition speed over real time. Finally, it includes a spectrum power analyzation correlator for detecting continuous wave interference, and a \iirntaps\ tap IIR filter for continuous-wave rejection between the frontend samples and the acquisition and tracking channels.
 \columnbreak
 
 \section*{Features}
-\begin{itemize}
+\begin{itemize} 
   \bulletnoindent
-  \item 3 bit samples
-  \item 16.368MHz sample clock frequency
-  \item 12?? tracking channels
-  \item 1/75?? real time serial search acquisition
+  \setlength{\itemsep}{4pt}
+  \item \samplebits\ bit samples
+  \item \feclkfreq\ MHz sample clock frequency
+  \item \numcorrelators\ correlators
+  \item \numtrackchans\ tracking channels / 6 correlators each
+  \item 1/\acqspeed\ real time acquisition channel / \acqntaps\ correlators
   \item Dedicated CW (continuous-wave) detection channel
-  \item IIR filter for CW filtering
+  \item \iirntaps -tap IIR filter for CW filtering
   \item Low level control
+\end{itemize}
+
+\renewcommand{\labelitemi}{\color{alt}\footnotesize{$\bullet$}}
+\begin{itemize}
+    \setlength{\itemsep}{0pt}
+    \item Acquisition channel searches user specified single carrier frequency / \acqntaps\ consecutive code phases in parallel, giving quick, flexible cold/warm start capability
+    \item Tracking channels with user updated code/carrier frequencies, giving high degree of phase control
+    \item Continuous-wave detection channel with \cwgranularityhz\ Hz granularity reports spectrum power at user specified frequency 
+    \item IIR filter's \iirnbits-bit signed coefficients set and updated directly by user
 \end{itemize}
 
 \pagebreak
@@ -68,7 +96,7 @@ continuous-wave rejection between the frontend samples and the acquisition and t
                       tip/.style={->,shorten >=1pt}]
 
     \tikzstyle{antenna} = [draw,isosceles triangle,minimum width=5mm,shape border rotate=300,color=red]
-    \tikzstyle{block} = [draw, fill=orange!20, rectangle, text width=1.5cm, minimum height=1.8cm, minimum width=1.8cm, line width=0.5pt]
+    \tikzstyle{block} = [draw, fill=orange!20, rectangle, text width=1.5cm, minimum height=2.0cm, minimum width=2.0cm, line width=0.5pt]
     \def\filterSS{\node[block]{};\draw[line width=1pt] (-4mm,-2mm) to[in=220,out=40] (4mm,-2mm) 
                                                         (-4mm,0mm) to[in=220,out=40] (4mm,0mm) 
                                                         (-4mm,2mm) to[in=220,out=40] (4mm,2mm)
@@ -90,7 +118,7 @@ continuous-wave rejection between the frontend samples and the acquisition and t
        %First row
        \node[below] (from frontend) {From Frontend}; & \node[minimum width=1.0cm] {}; & & \filterSS & & \\
        %Second row
-       & & \node[block] (cw) {CW \ \ \ Detection Correlator}; & & \node[block] (acq) {Acquisition Correlator}; & \node[block] (trackfront) {Tracking Correlators}; & \node[minimum width=2cm] {}; & \\
+       & & \node[block] (cw) {CW \ \ \ Detection Channel}; & & \node[block] (acq) {Acquisition Channel}; & \node[block] (trackfront) {Tracking Channels}; & \node[minimum width=2cm] {}; & \\
        %Third row
        & & \node[] (cw nodes center) {}; & \node[] (filter nodes center) {}; & \node[] (acq nodes center) {}; & \node[] (track nodes center) {}; & \node[] (nap stm arrows center) {}; & \node[minimum height=3cm] (to stm center) {}; \\
     };
@@ -158,7 +186,7 @@ continuous-wave rejection between the frontend samples and the acquisition and t
     %Other tracking channel boxes, then redraw original
     \draw let \p1=(trackfront) in ($(\x1+3mm, \y1+3mm)$) node[block,text width=1.7cm] (trackback) {};
     \draw let \p1=(trackfront) in ($(\x1+1.5mm, \y1+1.5mm)$) node[block,text width=1.7cm] (trackmid) {};
-    \draw (trackfront) node[block,text width=1.7cm] (trackfront) {Tracking Correlators};
+    \draw (trackfront) node[block,text width=1.7cm] (trackfront) {Tracking Channels};
 
     %Frontend clock initial segment and frontend data connections
     \path let \p0=(from frontend),\p1=(filter_west) in 
@@ -179,17 +207,17 @@ continuous-wave rejection between the frontend samples and the acquisition and t
     \draw[->,thick] (track data sig orig) -| node[above,near start,font=\scriptsize] {1 bit filtered} (track data sig dest);
 
     %Clock signal multipliers
-    \node[block] (cw multiplier) at (cw nodes below-1-2) [minimum width=5mm,minimum height=5mm,text width=3mm] {x3};
-    \node[block] (filter multiplier) at (filter nodes below-1-2) [minimum width=5mm,minimum height=5mm,text width=3mm] {x4};
-    \node[block] (acq multiplier) at (acq nodes below-1-2) [minimum width=5mm,minimum height=5mm,text width=3mm] {x5};
+    \node[block] (cw multiplier) at (cw nodes below-1-2) [minimum width=5mm,minimum height=5mm,text width=3mm] {x\cwfreqmult};
+    \node[block] (filter multiplier) at (filter nodes below-1-2) [minimum width=5mm,minimum height=5mm,text width=3mm] {x\iirntaps};
+    \node[block] (acq multiplier) at (acq nodes below-1-2) [minimum width=5mm,minimum height=5mm,text width=3mm] {x\acqfreqmult};
 
     %Interrupt line connections
-    \draw[<-,color=orange!100,thick] (cw nodes below-4-3) -- (cw nodes south-1-2);
-    \draw[<-,color=orange!100,thick] (filter nodes below-4-3) -- (filter nodes south-1-2);
-    \draw[<-,color=orange!100,thick] (acq nodes below-4-3) -- (acq nodes south-1-2);
-    \draw[<-,color=orange!100,thick] (track nodes below-4-3) -- (track nodes south-1-2);
-    \draw[-,color=orange!100,thick] (cw nodes below-4-3) -- (nap nodes-3-1);
-    \draw[>->,color=orange!100,thick] (nap nodes-3-1) -- node[above,font=\scriptsize,color=black] {IRQ} (stm nodes-3-1);
+    \draw[<-,color=green!100,thick] (cw nodes below-4-3) -- (cw nodes south-1-2);
+    \draw[<-,color=green!100,thick] (filter nodes below-4-3) -- (filter nodes south-1-2);
+    \draw[<-,color=green!100,thick] (acq nodes below-4-3) -- (acq nodes south-1-2);
+    \draw[<-,color=green!100,thick] (track nodes below-4-3) -- (track nodes south-1-2);
+    \draw[-,color=green!100,thick] (cw nodes below-4-3) -- (nap nodes-3-1);
+    \draw[>->,color=green!100,thick] (nap nodes-3-1) -- node[above,font=\scriptsize,color=black] {IRQ} (stm nodes-3-1);
     %Timing strobe line connections
     \draw[->,color=blue!100,thick] (cw nodes below-3-4) -- (cw nodes south-1-3);
     \draw[->,color=blue!100,thick] (filter nodes below-3-4) -- (filter nodes south-1-3);
@@ -230,10 +258,10 @@ A typical GPS receiver signal flow is shown below:
 \begin{center}
 \begin{tikzpicture}
 
-  \tikzstyle{block} = [draw, fill=orange!20, rectangle, minimum height=1.0cm, line width=0.5pt]
+  \tikzstyle{block} = [draw, fill=orange!20, rectangle, minimum height=0.8cm, line width=0.5pt]
 
-  \matrix (foo) [matrix of nodes, column sep=0.3cm,row sep=0.15cm, anchor=center, 
-                 nodes={anchor=center,font=\footnotesize}]
+  \matrix (foo) [matrix of nodes, column sep=0.2cm,row sep=0.05cm, anchor=center, 
+                 nodes={anchor=center,font=\small}]
   {
     \node[left] (samples) {Samples}; & \node[coordinate] (input) {}; & \node[block] (acq) {Acquisition}; &  \\ %First Row
      & & \node[left] {Code Phase}; \node[right] {Carrier Frequency}; &  \\ %Second Row
@@ -256,81 +284,88 @@ A typical GPS receiver signal flow is shown below:
 The acquisition and tracking blocks perform essentially the same DSP operation - a correlation of
 the incoming baseband samples with a locally generated carrier and spreading code, as represented
 by the below equation:
-\normalfont\small
-\begin{center}$y_{out}=\displaystyle\sum\limits_{n=0}^{N-1}x_{in}(n)e^{j\omega_{c} nt_s}c_{s}(n)$ ,
+
+\normalfont\footnotesize
+\begin{center}$y_{out}=\displaystyle\sum\limits_{n=0}^{N-1}x_{in}[n]e^{j\omega_{c} nt_s}c_{s}[n]$ ,
 where
 \end{center}
 $y_{out}$ : resultant correlation (complex)\\
 $N$ : correlation length \\
-$x_{in}$ : incoming samples \\
+$x_{in}$ : incoming samples (real or complex) \\
 $e^{j\omega_{c} nt_s}$ : local carrier (complex)\\
-$\omega_{c}$ : local carrier frequency in radians \\
+$\omega_{c}$ : local carrier frequency in radians/second \\
 $t_{s}$ : sampling period \\
 $c_s$ : spreading code \\
 
 \normalfont\normalsize
 
-This operation requires 2 multiplications and an addition for both the real and imaginary parts
-of the correlation, or 2 multiplications and 2 multiply-accumulates (MACCs). In order to track the
-spreading code, we typically use half-chip spaced early, prompt, and late code correlations, which
-brings this total to 6 multiplications and 6 MACCs per tracking correlator. If we assume a sampling
-frequency of 16.368MHz (as in the Swift Navigation system), 8 tracking correlators, and a continuously 
-running acquisition correlator, then we have approximately $800*10^6$ multiplications and MACCs per 
-second. FPGA's are well suited to this sort of repetitive, parallelized number crunching, and hence
-the choice for our system architeture.
+This operation requires 2 multiplications and an addition for both the real and imaginary parts of the correlation, or 2 multiplications and 2 multiply-accumulates (MACCs) per correlator per sample. The code multiplication can be performed with a simple sign flip, so we only actually need to perform the 2 MACCs per correlator per sample. If we assume a sampling frequency of 16.368MHz and \numcorrelators\ correlators (as in the Swift Navigation system), then we need to perform approximately \numgmaccs\ GMACCs per second (not including the CW detection or filtering). The higher end of embedded digital signal processors are just beginning to break into this range of ability and are not cheap. Luckily, cost competitive FPGAs that can perform in this range have been available for some years; hence the choice of our system architecture. 
 
 \pagebreak
 
-\section{Clock}
+\section{Clocking}
 
-All of the SwiftNAP's clocking resources are driven by the 16.368MHz CLKOUT pin of the MAX2769 Frontend.
-The table below shows how each peripheral in the SwiftNAP is clocked relative to the 16.368MHz input.
+All of the SwiftNAP's clocking resources are driven by the 16.368MHz CLKOUT pin of the MAX2769 Frontend. The table below shows the frequency that the accumulators in each block of the SwiftNAP are clocked at relative to the 16.368MHz base clock.
 \begin{center}
-\begin{tikzpicture}
+\begin{tikzpicture}[node distance=0cm]
   \tikzstyle{fc}=[
-    draw, rectangle, thick,
-    minimum height=2.5cm,
-    minimum width=5cm,
-    line width=1.0pt,
-    font=\huge,
-    scale=0.5
+    draw, rectangle,
+    minimum height=12mm,
+    minimum width=25mm,
+    line width=0.25pt,
+    font=\huge
   ]
   \tikzstyle{sc}=[fc,
-    minimum width = 10cm
+    minimum width = 5cm
   ]
 
-  \matrix [matrix of nodes]
+  \matrix (box) [matrix of nodes]
   {
-    |[fc] (peripheral) {};| & |[sc] (clock frequency) {};| \\
-    |[fc] (track) {};|      & |[sc] (track freq) {};| \\
-    |[fc] (acq) {};|        & |[sc] (acq freq) {};| \\
-    |[fc] (cw) {};|         & |[sc] (cw freq) {};| \\
-    |[fc] (iir) {};|        & |[sc] (iir freq) {};| \\
+    |[fc] (block) {};| & |[sc] (clock freq) {};| \\
+    |[fc] (track) {};| & |[sc] (track freq) {};| \\
+    |[fc] (acq) {};|   & |[sc] (acq freq) {};| \\
+    |[fc] (cw) {};|    & |[sc] (cw freq) {};| \\
+    |[fc] (iir) {};|   & |[sc] (iir freq) {};| \\
   };
 
-  \node[] at (peripheral) {Peripheral}; \node[] at (clock frequency) {Clock Freq : x 16.368MHz}; 
-  \node[] at (track) {Tracking};        \node[] at (track freq) {1x}; 
-  \node[] at (acq) {Acquisition};       \node[] at (acq freq) {3x}; 
-  \node[] at (cw) {CW Detection};       \node[] at (cw freq) {4x}; 
-  \node[] at (iir) {IIR Filter};        \node[] at (iir freq) {5x}; 
+  \draw[-,line width=0.5pt] (block.north west) -- (iir.south west) -- 
+                            (iir freq.south east) -- (clock freq.north east) -- (block.north west);
+
+  \node[] at (block) {\textbf{Block}}; \node[] at (clock freq) {\textbf{Clock Freq} : x \feclkfreq\ MHz}; 
+  \node[] at (track) {Tracking};       \node[] at (track freq) {1x = \feclkfreq\ MHz}; 
+  \node[] at (acq) {Acquisition};      \node[] at (acq freq) {\acqfreqmult x = \acqfreqmhz\ MHz}; 
+  \node[] at (cw) {CW Detection};      \node[] at (cw freq) {\cwfreqmult x = \cwfreqmhz\ MHz}; 
+  \node[] at (iir) {IIR Filter};       \node[] at (iir freq) {\iirntaps x = \iirfreqmhz\ MHz}; 
   
 \end{tikzpicture}
+\captionof{figure}[ToC entry]{SwiftNAP Block Clock Frequencies}
 \end{center}
-
-\subsection{Frontend clock frequency}
+This is not important for normal use of the channels - clock domains are crossed at the SPI registers and all channels expect the Timing Strobe to be synchronous with the base \feclkfreq\ MHz clock. The user should not need to take the channel operating frequencies into account except in the case of the acquisition or CW detection channels, where the time required to search a certain number of carrier frequencies/code phases or spectrum frequencies, respectively, may be of interest. See the \hyperlink{acqlink}{\it{Acquisition Channel}} and \hyperlink{cwlink}{\it{CW Detection Channel}} sections for further information.
 \subsection{SPI clock frequency}
+The SPI interface can be run only at integer multiples/dividends of the base \feclkfreq\ MHz clock (no re-configuration of the SwiftNAP is necessary to use a different SPI clock frequency).\ Allowed SPI clock frequencies in combination with the STM32F4 are \spiclkfreqs. ??
 
 \section{Communication Interface}
+The communication between the SwiftNAP and the STM32F4 is done using SPI, a single line "Timing Strobe", and a single interrupt request line.
 \subsection{SPI}
-\subsection{Timing Strobe}
-\subsection{Interrupt Line}
-\subsection{Pipelining}
+SPI is used between the SwiftNAP and the STM32F4 to write various parameters to the channels (enable bits, code/carrier phases, code/carrier phase frequencies, filter coefficients), to write the spreading codes to the channel code RAMs, and to read correlations from the channels. ?? paragraph about used/available bandwidth ??
+\subsection{Timing Strobe} 
+The Timing Strobe's falling edge (synchronous with the rising edge of the base \feclkfreq\ MHz clock) is used to tell the SwiftNAP channels to start certain timing sensitive procedures. 
 
-\section{Loadable Code RAM}
-\subsection{Loading sample RAM}
+The Timing Strobe tells the acquisition channel to start filling its sample RAM, allowing sampling to take place at a known time and acquisition to be performed accordingly. The CW channel uses the Timing Strobe for the same purpose, though the phase relation between the local sinusoid generated by the CW channel and the incoming sample spectrum is not important. 
+
+In the case of the tracking channels, the spreading code and initial tracking parameters (code phase, carrier phase, code phase rate, and carrier phase rate) are written via SPI and the Timing Strobe tells the channel to start correlating with those parameters.
+\subsection{Interrupt Line}
+The interrupt request line is an active-high flag that signals that one or more channels has finished correlating over the last set of parameters (code phase / carrier frequency for the acquisition channel, spectrum frequency for the CW channel, carrier frequency / code frequency for the tracking channel) and is waiting for its correlations to be read, and new parameters to be written.
+
+The interrupt request is raised differently for the tracking channels than the acquisition/CW detection channels. In the case of the tracking channels, the interrupt request is raised when a prompt code phase epoch occurs (approximately every \samplesperms\ samples, depending on the code frequency written). In the case of the acquisition/CW detection channels, the interrupt request occurs when the channel has finished correlating over the set correlation length - (equal to the length of the sample RAM).
+\subsection{Pipelining}
+The acquisition, CW detection, and tracking channels employ pipelining of correlation parameters. This is done to reduce search time (acquisition and CW detection) and make loop dynamics more predictable (tracking channel). Below is a timing diagram showing how channel updates might take place without pipelining.
+
+\section{Code RAM}
+\subsection{Loading code RAM}
 
 \section{Sample RAM}
-\subsection{Loading code RAM}
+\subsection{Loading sample RAM}
 
 \section{Interrupt Request Register}
 
@@ -338,6 +373,7 @@ The table below shows how each peripheral in the SwiftNAP is clocked relative to
 
 \section{Register Addresses}
 
+\hypertarget{acqlink}{}
 \section{Acquisition Channel}
 \subsection{Overview}
 \subsection{Registers}
@@ -365,6 +401,7 @@ The table below shows how each peripheral in the SwiftNAP is clocked relative to
 \subsubsection{Servicing interrupts}
 \subsubsection{Stopping tracking}
 
+\hypertarget{cwlink}{}
 \section{CW Detection Channel}
 \subsection{Overview}
 \subsection{Registers}
