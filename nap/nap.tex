@@ -364,19 +364,21 @@ The interrupt request line is an active-high flag that signals that one or more 
 
 The interrupt request is raised differently for the tracking channels than the acquisition/CW detection channels. In the case of the tracking channels, the interrupt request is raised when a prompt code phase rollover (from 1022 to 0) occurs. This happens approximately every \samplesperms\ samples, depending on the starting code phase and the code frequency for that integration period. In the case of the acquisition/CW detection channels, the interrupt request occurs when the channel has finished correlating over the set correlation length (equal to the length of the sample RAM). This is \acqlength\ samples (\acqms\ ms) for the acquisition channel and \cwlength\ samples (\cwms\ ms) for the CW channel.
 \subsection{Pipelining}
-The acquisition, CW detection, and tracking channels employ pipelining of correlation parameters. This is done to minimize search time (acquisition and CW detection) and to make phase locked loop (PLL) and delay locked loop (DLL) characteristics more predictable (tracking). \hyperlink{fig4}{\it Figure 4} shows how tracking updates would occur without pipelining. \hyperlink{fig5}{\it Figure 5} show how tracking channel updates occur with pipelining. \\
+The acquisition, CW detection, and tracking channels employ pipelining of correlation parameters. This is done to minimize search time (acquisition and CW detection) and to make phase locked loop (PLL) and delay locked loop (DLL) characteristics more predictable (tracking). \hyperlink{fig4}{\it Figure 4} shows how tracking updates would occur without pipelining. \hyperlink{fig5}{\it Figure 5} show how tracking channel updates occur with pipelining. \hyperlink{fig6}{\it Figure 6} shows how acquisition/CW detection updates would occur without pipelining. \hyperlink{fig7}{\it Figure 7} shows how acquisition/CW detection updates occur with pipelining.\\
 \end{multicols}
 
-\hypertarget{fig4}{}
 \begin{center}
 
-%\tikzstyle{label} = [font=\normalsize,node distance=1cm]
-\definecolor{helplinecolor}{RGB}{160,160,160}
-\tikzset{helpline/.style={draw=helplinecolor, dash pattern=on 4pt off 2pt}}
+
+\definecolor{helplinecolor}{RGB}{120,120,120}
+\tikzset{helpline/.style={draw=helplinecolor, dash pattern=on 4pt off 2pt,line width = 1pt}}
+\definecolor{tdgreen}{RGB}{0,125,0}
+
+\hypertarget{fig4}{}
 \begin{tikztimingtable}[font=\large,label/.style={font=\normalsize,node distance=1cm}]
 Correlation Interval & [blue] 5D{1} N(CPR0_MID) 10D{2} N(CPR1_MID) 15D{3} N(CPR2_MID) 8D{4} N(CPR3_MID) 3D{5}\\
-Channel IRQ          & [red] 5L N(CPR0_BEG) 2H N(IRQ0_FALL) 8L N(CPR1_BEG) 7H N(IRQ1_FALL) 8L N(CPR2_BEG) 3H N(IRQ2_FALL) 5L N(CPR3_BEG) 3H \\
-Code Freq. In Use    & [blue] 7D{CF$_0$} N(CF1W) 15D{CF$_1$} N(CF2W) 11D{CF$_2$} N(CF3W) 7D{CF$_3$}\\
+Channel IRQ          & [black] 5L N(CPR0_BEG) 2H N(IRQ0_FALL) 8L N(CPR1_BEG) 7H N(IRQ1_FALL) 8L N(CPR2_BEG) 3H N(IRQ2_FALL) 5L N(CPR3_BEG) 3H \\
+Code Freq. In Use    & [tdgreen] 7D{CF$_0$} N(CF1W) 15D{CF$_1$} N(CF2W) 11D{CF$_2$} N(CF3W) 7D{CF$_3$}\\
 \extracode
   tablerules
   \begin{pgfonlayer}{background}
@@ -386,7 +388,7 @@ Code Freq. In Use    & [blue] 7D{CF$_0$} N(CF1W) 15D{CF$_1$} N(CF2W) 11D{CF$_2$}
       \node[coordinate,below of=CPR\n_END,node distance=0.5cm,name=t\n] {};
       \draw[helpline] (CPR\n_BEG) -- node[name=cprline\n]{} (CPR\n_END);
       \node[above of=CPR\n_END,font=\footnotesize,node distance=0.25cm] {CPR$_\n$};}
-    %draw s_cf_n lines between cprlines and label them
+    %draw t_cf_n lines between cprlines and label them
     \draw[<->] (t0) -- node[name=t01line]{} (t1); \node[rectangle,fill=white,font=\small] at (t01line) {t$_2$};
     \draw[<->] (t1) -- node[name=t12line]{} (t2); \node[rectangle,fill=white,font=\small] at (t12line) {t$_3$};
     \draw[<->] (t2) -- node[name=t23line]{} (t3); \node[rectangle,fill=white,font=\small] at (t23line) {t$_4$};
@@ -398,15 +400,91 @@ Code Freq. In Use    & [blue] 7D{CF$_0$} N(CF1W) 15D{CF$_1$} N(CF2W) 11D{CF$_2$}
     \node[below of=IRQ0_FALL_END,font=\footnotesize,node distance=0.25cm] {CF$_1$W};
     \node[below of=IRQ1_FALL_END,font=\footnotesize,node distance=0.25cm] {CF$_2$W};
     \node[below of=IRQ2_FALL_END,font=\footnotesize,node distance=0.25cm] {CF$_3$W};
-    %draw s_n lines between irqlines and label them
+    %draw t_n lines between irqlines and label them
     \draw[<->] (tcf0) -- node[name=tcf01line]{} (tcf1); \node[rectangle,fill=white,font=\small] at (tcf01line) {t$_{CF_1}$};
     \draw[<->] (tcf1) -- node[name=tcf12line]{} (tcf2); \node[rectangle,fill=white,font=\small] at (tcf12line) {t$_{CF_2}$};
   \end{pgfonlayer}
 \end{tikztimingtable}
-\captionof{figure}[ToC entry]{\small Tracking channel updates without pipelining. CPR$_n$ = code phase rollover of correlation interval \it n\normalfont. CF$_n$ = code frequency calculated by STM's DLL filter after reading correlation interval \it n\normalfont's correlations. CF$_n$W = point at which CF$_n$ is written into channel. \par\ \ \ \ \ Due to the unknown number and timing of other interrupts in the STM, it is not possible to service the tracking channel's IRQ in the same amount of time each cycle. This leads to an unknown amount of time that each correlation interval \it n\normalfont\ will spend using CF$_{n-2}$ vs CF$_{n-1}$ to increment its code phase. This has the effect of making the time t$_n$ of (and equivalently number of samples in) each correlation interval unknown, and the amount of time t$_{CF_n}$ (and equivalently number of samples) for which any CF$_n$ is used to accumulate the code phase unknown. This makes loop dynamics less predictable.}
-\end{center}
+\captionof{figure}[ToC entry]{\normalsize Tracking channel updates without pipelining. CPR$_n$ = code phase rollover at the end of correlation interval \it n\normalfont. CF$_n$ = code frequency calculated by STM's DLL filter using correlation interval \it n\normalfont's correlations. CF$_n$W = point at which CF$_n$ is written into channel. \par\ \ \ \ \ Due to the unknown number and timing of other interrupts in the STM, it is not possible to service the tracking channel's IRQ in the same amount of time each cycle. This leads to an unknown (or very unwieldy to calculate, at least) amount of time that each correlation interval \it n\normalfont\ will spend using CF$_{n-2}$ vs CF$_{n-1}$ to increment its code phase. This has the effect of making the time t$_n$ of (and equivalently number of samples in) each correlation interval unknown, and the amount of time t$_{CF_n}$ (and equivalently number of samples) for which any CF$_n$ is used to accumulate the code phase unknown. This makes loop dynamics less predictable.}
 
+\ \\
+\ \\
 \hypertarget{fig5}{}
+
+\definecolor{tdpurple}{RGB}{120,0,120}
+\begin{tikztimingtable}[font=\large,label/.style={font=\normalsize,node distance=1cm}]
+Correlation Interval  & [blue] 5D{1} N(CPR1_MID) 10D{2} N(CPR2_MID) 15D{3} N(CPR3_MID) 8D{4} N(CPR4_MID) 3D{5}\\
+Channel IRQ           & [black] 5L N(CPR1_BEG) 2H N(IRQ1_FALL) 8L N(CPR2_BEG) 7H N(IRQ2_FALL) 8L N(CPR3_BEG) 3H N(IRQ3_FALL) 5L N(CPR4_BEG) 3H \\
+Code Freq. In Use     & [tdgreen] 5D{CF$_{-1}$} 10D{CF$_0$} 15D{CF$_1$} 8D{CF$_2$} 3D{CF$_3$}\\
+Code Freq. Latched    & [tdpurple] 7D{CF$_0$} N(CF1W) 15D{CF$_1$} N(CF2W) 11D{CF$_2$} N(CF3W) 7D{CF$_3$}\\
+\extracode
+  tablerules
+  \begin{pgfonlayer}{background}
+    %draw code phase rollover lines and labels
+    \foreach \n in {1,...,4}{ 
+      \node[coordinate,above of=CPR\n_MID,node distance=1.5cm,name=CPR\n_END] {};
+      \node[coordinate,below of=CPR\n_END,node distance=0.4cm,name=t\n] {};
+      \node[coordinate,below of=CPR\n_END,node distance=0.85cm,name=tcf\n] {};
+      \draw[helpline] (CPR\n_BEG) -- node[name=cprline\n]{} (CPR\n_END);
+      \node[above of=CPR\n_END,font=\footnotesize,node distance=0.25cm] {CPR$_\n$};}
+    %draw t_cf_n lines between cprlines and label them
+    \draw[<->] (t1) -- node[name=t12line]{} (t2); \node[rectangle,fill=white,font=\small] at (t12line) {t$_2$};
+    \draw[<->] (t2) -- node[name=t23line]{} (t3); \node[rectangle,fill=white,font=\small] at (t23line) {t$_3$};
+    \draw[<->] (t3) -- node[name=t34line]{} (t4); \node[rectangle,fill=white,font=\small] at (t34line) {t$_4$};
+    %draw IRQ lines and labels
+    \foreach \n in {1,...,3}{ 
+      \node[coordinate,below of=IRQ\n_FALL,node distance=1.7cm,name=IRQ\n_FALL_END] {};
+      \draw[helpline] (IRQ\n_FALL) -- node[name=irqline\n]{} (IRQ\n_FALL_END);}
+    \node[below of=IRQ1_FALL_END,font=\footnotesize,node distance=0.25cm] {CF$_1$W};
+    \node[below of=IRQ2_FALL_END,font=\footnotesize,node distance=0.25cm] {CF$_2$W};
+    \node[below of=IRQ3_FALL_END,font=\footnotesize,node distance=0.25cm] {CF$_3$W};
+    %draw t_n lines between irqlines and label them
+    \draw[<->] (tcf1) -- node[name=tcf12line]{} (tcf2); \node[rectangle,fill=white,font=\small] at (tcf12line) {t$_{CF_0}$};
+    \draw[<->] (tcf2) -- node[name=tcf23line]{} (tcf3); \node[rectangle,fill=white,font=\small] at (tcf23line) {t$_{CF_1}$};
+    \draw[<->] (tcf3) -- node[name=tcf34line]{} (tcf4); \node[rectangle,fill=white,font=\small] at (tcf34line) {t$_{CF_2}$};
+  \end{pgfonlayer}
+\end{tikztimingtable}
+\captionof{figure}[ToC entry]{\normalsize Tracking channel updates with pipelining. CPR$_n$ = code phase rollover at the end of correlation interval \it n\normalfont. CF$_n$ = code frequency calculated by STM's DLL filter using correlation interval \it n\normalfont's correlations. CF$_n$W = point at which CF$_n$ is written into channel. \par\ \ \ \ \ The delay in servicing of interrupts is not an issue now. CF$_n$ is latched in at the same time as in the previous case \hyperlink{fig4}{\it(Figure 4)}, but now it is not used in code phase accumulation until CPR$_{n+1}$. Now each correlation interval $_n$ only uses CF$_{n-2}$ to do code phase accumulation, and the amount of time (t$_n$/t$_{CF_n}$) in each correlation interval/code frequency is deterministic. There is now always 1 ms of delay between CPR$_n$ and the use of CF$_n$, but we have not found this to cause any problems in our PLL/DLL implementation.}
+
+\ \pagebreak
+
+\hypertarget{fig6}{}
+
+\begin{tikztimingtable}[font=\large,label/.style={font=\normalsize,node distance=1cm}]
+Correlation Interval  & [blue] 5D{1} N(CPR1_MID) 2X 8D{2} N(CPR2_MID) 7X 8D{3} N(CPR3_MID) 3X 5D{4} N(CPR4_MID) 3X\\
+Channel IRQ / Corrs Valid & [black] 5L N(CPR1_BEG) 2H N(IRQ1_FALL) 8L N(CPR2_BEG) 7H N(IRQ2_FALL) 8L N(CPR3_BEG) 3H N(IRQ3_FALL) 5L N(CPR4_BEG) 3H \\
+Search Param's In Use & [tdgreen] 5D{SP$_1$} 2X 8D{SP$_2$} 7X 8D{SP$_3$} 3X 5D{SP$_4$} 3X\\
+\extracode
+  tablerules
+  \begin{pgfonlayer}{background}
+    %draw code phase rollover lines and labels
+    \foreach \n in {1,...,4}{ 
+      \node[coordinate,above of=CPR\n_MID,node distance=1.5cm,name=CPR\n_END] {};
+      \node[coordinate,below of=CPR\n_END,node distance=0.4cm,name=t\n] {};
+      \node[coordinate,below of=CPR\n_END,node distance=0.85cm,name=tcf\n] {};
+      \draw[helpline] (CPR\n_BEG) -- node[name=cprline\n]{} (CPR\n_END);
+      \node[above of=CPR\n_END,font=\footnotesize,node distance=0.25cm] {CPR$_\n$};}
+    %draw t_cf_n lines between cprlines and label them
+    \draw[<->] (t1) -- node[name=t12line]{} (t2); \node[rectangle,fill=white,font=\small] at (t12line) {t$_2$};
+    \draw[<->] (t2) -- node[name=t23line]{} (t3); \node[rectangle,fill=white,font=\small] at (t23line) {t$_3$};
+    \draw[<->] (t3) -- node[name=t34line]{} (t4); \node[rectangle,fill=white,font=\small] at (t34line) {t$_4$};
+    %draw IRQ lines and labels
+    \foreach \n in {1,...,3}{ 
+      \node[coordinate,below of=IRQ\n_FALL,node distance=1.7cm,name=IRQ\n_FALL_END] {};
+      \draw[helpline] (IRQ\n_FALL) -- node[name=irqline\n]{} (IRQ\n_FALL_END);}
+    \node[below of=IRQ1_FALL_END,font=\footnotesize,node distance=0.25cm] {CF$_1$W};
+    \node[below of=IRQ2_FALL_END,font=\footnotesize,node distance=0.25cm] {CF$_2$W};
+    \node[below of=IRQ3_FALL_END,font=\footnotesize,node distance=0.25cm] {CF$_3$W};
+    %draw t_n lines between irqlines and label them
+    \draw[<->] (tcf1) -- node[name=tcf12line]{} (tcf2); \node[rectangle,fill=white,font=\small] at (tcf12line) {t$_{CF_0}$};
+    \draw[<->] (tcf2) -- node[name=tcf23line]{} (tcf3); \node[rectangle,fill=white,font=\small] at (tcf23line) {t$_{CF_1}$};
+    \draw[<->] (tcf3) -- node[name=tcf34line]{} (tcf4); \node[rectangle,fill=white,font=\small] at (tcf34line) {t$_{CF_2}$};
+  \end{pgfonlayer}
+\end{tikztimingtable}
+\captionof{figure}[ToC entry]{\small Acquisition/CW detection updates without pipelining. CPR$_n$ = code phase rollover at the end of correlation interval \it n\normalfont. CF$_n$ = code frequency calculated by STM's DLL filter using correlation interval \it n\normalfont's correlations. CF$_n$W = point at which CF$_n$ is written into channel. \par\ \ \ \ \ The delay in servicing of interrupts is not an issue now. CF$_n$ is latched in at the same time as in the previous case \hyperlink{fig4}{\it(Figure 4)}, but now it is not used in code phase accumulation until CPR$_{n+1}$. Now each correlation interval $_n$ only uses CF$_{n-2}$ to do code phase accumulation, and the amount of time (t$_n$/t$_{CF_n}$) in each correlation interval/code frequency is deterministic.}
+
+
+\end{center}
 
 \begin{multicols}{2}
 
